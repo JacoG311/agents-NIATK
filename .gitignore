@@ -1,3 +1,114 @@
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+*.env
+*.env.*
+
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyc
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+*.whl
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# PyInstaller
+*.spec
+
+# JetBrains IDEs (PyCharm, IntelliJ)
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# VS Code
+.vscode/
+.history/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Local config and secrets
+*.local
+*.secret
+secrets.json
+config.json
+credentials.json
+*.sqlite3
+*.db
+
+# Docker
+*.pid
+*.pid.lock
+
+# Git
+.git/
+.gitignore
+
+# Security: exclude files that may contain Nordstrom-sensitive data
+nordstrom_*.csv
+nordstrom_*.xlsx
+nordstrom_*.json
+internal_*.*
+confidential_*.*
+raw_data/
+data_exports/
+reports/
+
+# Optional: exclude large files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.gz
+*.bz2
+*.xz
+*.pdf
+*.pptx
+*.docx
+
 # Folder view configuration files
 .DS_Store
 Desktop.ini
