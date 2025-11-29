@@ -1,0 +1,35 @@
+#!/bin/sh
+# Pre-commit hook to prevent unauthorized instruction files from being added
+# Enable by running: git config core.hooksPath .githooks
+
+# Patterns to block unless explicitly authorized via .authorized_instructions
+BLOCK_PATTERNS='^instructions/.*\.md$|.*\.agent\.md$'
+
+# Get staged files
+STAGED=$(git diff --cached --name-only)
+
+if [ -z "$STAGED" ]; then
+  exit 0
+fi
+
+for file in $STAGED; do
+  echo "$file" | grep -E "$BLOCK_PATTERNS" >/dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    # Allow if the file is listed in .authorized_instructions
+    if [ -f .authorized_instructions ]; then
+      grep -Fxq "$file" .authorized_instructions >/dev/null 2>&1
+      if [ $? -eq 0 ]; then
+        # authorized, skip
+        continue
+      fi
+    fi
+
+    echo "\nERROR: Attempt to add instruction/agent files blocked by pre-commit hook:" >&2
+    echo "  $file" >&2
+    echo "If this file is authorized, add its path to .authorized_instructions or disable the hook." >&2
+    echo "To enable hooks locally: git config core.hooksPath .githooks" >&2
+    exit 1
+  fi
+done
+
+exit 0

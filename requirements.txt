@@ -1,29 +1,43 @@
-
+# ============================================================================
+# AGENT RUNNER: Multi-Provider LLM Orchestration Dependencies
+# ============================================================================
+# LLM Providers
+openai>=1.0.0                           # Azure OpenAI & OpenAI SDK
+anthropic>=0.7.0                        # Anthropic Claude SDK
+# Configuration & Validation
+pyyaml>=6.0                             # YAML configuration files
+jsonschema>=4.0.0                       # JSON schema validation for outputs
+requests>=2.31.0                        # HTTP requests (for Ollama, generic APIs)
+python-dotenv>=1.0.0                    # Environment variable management
+# Async & Performance
+aiohttp>=3.9.0                          # Async HTTP client for concurrent requests
+tiktoken>=0.5.0                         # Accurate token counting for LLMs
+# Testing & Quality
+pytest>=7.4.0                           # Unit testing framework
+pytest-asyncio>=0.21.0                  # Async test support
+pytest-cov>=4.1.0                       # Coverage reporting
+pytest-mock>=3.11.1                     # Mocking utilities
+responses>=0.24.0                       # Mock HTTP responses
+# ============================================================================
+# DATA ANALYTICS & WAREHOUSE INTEGRATION (Existing)
+# ============================================================================
 # Core Python data stack
 numpy==2.3.3
 pandas==2.3.2
 scipy==1.16.2
-
 # Machine learning / predictive modeling
 scikit-learn==1.7.2
 xgboost==3.0.5
 statsmodels==0.14.5
-
 # Visualization & reporting
 matplotlib==3.10.6
 seaborn==0.13.2
 plotly==6.3.0
-openpyxl==3.1.5  # Excel I/O
-reportlab==4.4.4  # PDF reports
-
+openpyxl==3.1.5                         # Excel I/O
+reportlab==4.4.4                        # PDF reports
 # Database connectors (for warehouse queries)
 sqlalchemy==2.0.43
-psycopg2-binary==2.9.10  # PostgreSQL (common in WMS/DMS)
-pyodbc==5.2.0  # For SQL Server, Oracle, etc.
-
+psycopg2-binary==2.9.10                 # PostgreSQL (common in WMS/DMS)
+pyodbc==5.2.0                           # SQL Server, Oracle, etc.
 # Jupyter (if you want notebooks inside PyCharm)
 jupyter==1.1.1
-
-# Utility
-pyyaml==6.0.3  # YAML config support
-python-dotenv==1.1.1  # Manage secrets/env vars

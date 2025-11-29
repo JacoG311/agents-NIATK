@@ -1,0 +1,224 @@
+version: "1"
+
+# ============================================================================
+# Agent Definition
+# ============================================================================
+agent:
+  name: "Inventory Analyst - Supply Chain Operations"
+  description: "AI agent for supply chain inventory analysis and variance detection"
+  instructions_path: "./Inventory_Analyst_Supply_Chain_Operations.agent.md"
+  default_temperature: 0.2
+  default_max_tokens: 4000
+  output_mode: "json"
+
+# ============================================================================
+# LLM Provider Configurations
+# ============================================================================
+models:
+  azure_openai:
+    provider: "azure-openai"
+    endpoint: "${AZURE_ENDPOINT}"
+    api_key: "${AZURE_OPENAI_API_KEY}"
+    api_version: "2024-10-01"  # Use stable version, not preview
+    deployments:
+      - id: "${AZURE_DEPLOYMENT_GPT4_TURBO}"
+        name: "gpt-4-turbo"
+        role: "primary"
+        temperature: 0.2
+        max_tokens: 4000
+      - id: "${AZURE_DEPLOYMENT_GPT5}"
+        name: "gpt-5"
+        role: "optional"
+        temperature: 0.2
+        max_tokens: 4000
+
+  anthropic:
+    provider: "anthropic"
+    api_key: "${ANTHROPIC_API_KEY}"
+    model: "claude-3-5-sonnet-20241022"  # Latest stable model
+    role: "secondary"
+    endpoint: "https://api.anthropic.com/v1/messages"
+    temperature: 0.2
+    max_tokens: 8000
+
+  local:
+    provider: "ollama"
+    host: "${LOCAL_LLM_HOST:-http://localhost:11434}"  # Fallback default
+    model: "${LOCAL_LLM_MODEL:-llama2}"
+    role: "fallback"
+    temperature: 0.2
+    max_tokens: 4096
+
+# ============================================================================
+# Routing Policy: Cascade with Fallback
+# ============================================================================
+routing:
+  policy: "cascade"  # Try providers in order until one succeeds
+  order:
+    - "azure_openai:gpt-4-turbo"
+    - "anthropic:claude-3.5"
+    - "local"
+  
+  # Timeout per provider (ISO 8601 duration or seconds)
+  timeouts:
+    azure_openai: "20s"   # Premium provider, lower timeout
+    anthropic: "25s"      # Secondary, slightly higher
+    local: "60s"          # Local can be slower, allow more time
+  
+  # Retry configuration for transient failures
+  retry:
+    attempts: 2           # Total attempts (including initial)
+    backoff: "exponential"
+    initial_delay_ms: 500
+    max_delay_ms: 3000
+
+# ============================================================================
+# Cost Control & Guardrails
+# ============================================================================
+guardrails:
+  daily_usd_limit: "${DAILY_COST_LIMIT_USD:-10.0}"  # Default $10/day
+  on_exceed: "switch_to_local"                       # Action when limit hit
+  cost_tracking_enabled: true
+  
+  # Safety limits per call
+  max_tokens_per_call: 8000
+  temperature_min: 0.0
+  temperature_max: 2.0
+
+# ============================================================================
+# Task-Specific Configuration
+# ============================================================================
+tasks:
+  variance_assignment:
+    description: "Assign variance events to inventory categories and owners"
+    preferred_model: "azure_openai:gpt-4-turbo"
+    allow_fallback: true
+    temperature: 0.2
+    max_tokens: 4000
+    output_mode: "json"
+    
+    # JSON schema for output validation
+    output_schema:
+      type: "object"
+      required:
+        - "Owner"
+        - "Area"
+        - "ProcessWeek"
+        - "ProcessDate"
+        - "Processor"
+        - "Error"
+        - "PatternIdentified"
+        - "Shift"
+        - "Initial"
+      properties:
+        Owner:
+          type: "string"
+          description: "Variance owner (e.g., Inbound, WIP, Outbound)"
+        Area:
+          type: "string"
+          description: "Physical or logical area where variance occurred"
+        ProcessWeek:
+          type: "string"
+          description: "Week identifier (ISO 8601)"
+        ProcessDate:
+          type: "string"
+          description: "Date of processing (ISO 8601)"
+        Processor:
+          type: "string"
+          description: "User ID or name responsible for variance"
+        Error:
+          type: "string"
+          description: "Error category or type"
+        PatternIdentified:
+          type: "string"
+          description: "Detected pattern (recurring, seasonal, etc.)"
+        OtherSKUCount:
+          type: "string"
+          description: "Count of other SKUs involved"
+        Shift:
+          type: "string"
+          description: "Shift during which variance occurred"
+        UserShifts:
+          type: "string"
+          description: "User's assigned shifts"
+        Initial:
+          type: "string"
+          description: "Initials of processor"
+        Note:
+          type: "string"
+          description: "Additional notes or context"
+        Verified:
+          type: "string"
+          description: "Verification status (yes/no/pending)"
+
+  diagnostics_why_processor:
+    description: "Analyze why a specific processor caused a variance"
+    preferred_model: "anthropic:claude-3.5"
+    allow_fallback: true
+    temperature: 0.3  # Slightly higher for exploration
+    max_tokens: 6000
+    output_mode: "markdown"
+
+  offline_batch:
+    description: "Process batch of variance records offline (local only)"
+    preferred_model: "local"
+    allow_fallback: false  # Don't fall back to cloud for offline task
+    temperature: 0.2
+    max_tokens: 4096
+    output_mode: "json"
+
+  prompt_engineer:
+    description: "Create and optimize production-ready prompts. Uses the prompt-engineer system instructions."
+    preferred_model: "anthropic:claude-3.5"
+    allow_fallback: true
+    temperature: 0.2
+    max_tokens: 4000
+    output_mode: "markdown"
+    # NOTE: instructions_path removed — prompt file quarantined for source verification
+    # Suggested output schema to help validation (optional)
+    output_schema:
+      type: "object"
+      properties:
+        prompt:
+          type: "string"
+        implementation_notes:
+          type: "string"
+        testing_and_evaluation:
+          type: "string"
+        usage_guidelines:
+          type: "string"
+
+# ============================================================================
+# Secrets & Environment Variables
+# ============================================================================
+secrets:
+  env_required:
+    - "AZURE_ENDPOINT"
+    - "AZURE_OPENAI_API_KEY"
+    - "AZURE_DEPLOYMENT_GPT4_TURBO"
+    - "ANTHROPIC_API_KEY"
+  
+  env_optional:
+    - "AZURE_DEPLOYMENT_GPT5"
+    - "LOCAL_LLM_HOST"
+    - "LOCAL_LLM_MODEL"
+    - "DAILY_COST_LIMIT_USD"
+    - "LOG_LEVEL"
+
+# ============================================================================
+# Logging & Observability
+# ============================================================================
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "json"  # json or plain
+  
+  # Fields to redact from logs (sensitive data)
+  redact_fields:
+    - "api_key"
+    - "Authorization"
+    - "x-api-key"
+    - "AZURE_OPENAI_API_KEY"
+    - "ANTHROPIC_API_KEY"
+  
+  # Log detailed API calls (tokens, costs, latency)
+  include_metrics: true

@@ -1,0 +1,87 @@
+{
+  "version": "1",
+  "agent": {
+    "name": "Inventory Analyst - Supply Chain Operations",
+    "instructions_path": "./Inventory_Analyst_Supply_Chain_Operations.agent.md",
+    "default_temperature": 0.2,
+    "default_max_tokens": 4000,
+    "output_mode": "json"
+  },
+  "models": {
+    "azure_openai": {
+      "provider": "azure-openai",
+      "endpoint": "${AZURE_ENDPOINT}",
+      "api_key": "${AZURE_OPENAI_API_KEY}",
+      "api_version": "2025-01-01-preview",
+      "deployments": [
+        { "id": "${AZURE_DEPLOYMENT_GPT4_TURBO}", "name": "gpt-4-turbo", "role": "primary", "temperature": 0.2, "max_tokens": 4000 },
+        { "id": "${AZURE_DEPLOYMENT_GPT5}", "name": "gpt-5", "role": "optional", "temperature": 0.2, "max_tokens": 4000 }
+      ]
+    },
+    "anthropic": {
+      "provider": "anthropic",
+      "api_key": "${ANTHROPIC_API_KEY}",
+      "model": "claude-3.5",
+      "role": "secondary",
+      "endpoint": "https://api.anthropic.com/v1/messages",
+      "temperature": 0.2,
+      "max_tokens": 8000
+    },
+    "local": {
+      "provider": "ollama",
+      "host": "${LOCAL_LLM_HOST}",
+      "model": "${LOCAL_LLM_MODEL}",
+      "role": "fallback",
+      "temperature": 0.2,
+      "max_tokens": 4096
+    }
+  },
+  "routing": {
+    "policy": "cascade",
+    "order": ["azure_openai:gpt-4-turbo", "anthropic:claude-3.5", "local"],
+    "timeouts": { "azure_openai": "20s", "anthropic": "25s", "local": "60s" },
+    "retry": { "attempts": 2, "backoff": "exponential", "initial_delay_ms": 500, "max_delay_ms": 3000 }
+  },
+  "guardrails": {
+    "daily_usd_limit": "${DAILY_COST_LIMIT_USD}",
+    "on_exceed": "switch_to_local"
+  },
+  "tasks": {
+    "variance_assignment": {
+      "output_schema": {
+        "type": "object",
+        "required": ["Owner", "Area", "ProcessWeek", "ProcessDate", "Processor", "Error", "PatternIdentified", "Shift", "Initial"],
+        "properties": {
+          "Owner": { "type": "string" },
+          "Area": { "type": "string" },
+          "ProcessWeek": { "type": "string" },
+          "ProcessDate": { "type": "string" },
+          "Processor": { "type": "string" },
+          "Error": { "type": "string" },
+          "PatternIdentified": { "type": "string" },
+          "OtherSKUCount": { "type": "string" },
+          "Shift": { "type": "string" },
+          "UserShifts": { "type": "string" },
+          "Initial": { "type": "string" },
+          "Note": { "type": "string" },
+          "Verified": { "type": "string" }
+        }
+      },
+      "preferred_model": "azure_openai:gpt-4-turbo",
+      "allow_fallback": true,
+      "output_mode": "json"
+    },
+    "diagnostics_why_processor": {
+      "preferred_model": "anthropic:claude-3.5",
+      "allow_fallback": true,
+      "output_mode": "markdown"
+    },
+    "offline_batch": {
+      "preferred_model": "local",
+      "allow_fallback": false,
+      "output_mode": "json"
+    }
+  },
+  "secrets": { "env_required": ["AZURE_ENDPOINT","AZURE_OPENAI_API_KEY","AZURE_DEPLOYMENT_GPT4_TURBO","AZURE_DEPLOYMENT_GPT5","ANTHROPIC_API_KEY","LOCAL_LLM_HOST","LOCAL_LLM_MODEL","DAILY_COST_LIMIT_USD"] },
+  "logging": { "level": "INFO", "redact_fields": ["api_key","Authorization","x-api-key"] }
+}
